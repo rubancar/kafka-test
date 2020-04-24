@@ -1,4 +1,4 @@
-package com.github.kafkalecture.kafka.tutorial.one;
+package kafka.tutorial;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
