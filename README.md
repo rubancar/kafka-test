@@ -9,8 +9,10 @@ implemented using Twitter Streaming API.
 
 This uses Kafka API and Twitter API.
 
-
-
+### Twitter Kafka connect
+Kafka connector version 0.0.26 from [this repo](https://github.com/jcustenborder/kafka-connect-twitter/releases/tag/0.2.26), we need to configure the file twitter.properties and then 
+execute the following command:\
+**connect-standalone.sh connect-standalone.properties twitter.properties**
 
 ### Built With
 
