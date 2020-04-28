@@ -24,3 +24,7 @@ hs_err_pid*
 
 # Environment files
 .env
+
+replacements.txt
+bfg-1.13.0.jar
+prod.twitter.properties
