@@ -13,6 +13,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -48,24 +50,38 @@ public class ElasticSearchConsumer {
             while(true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100)); // new in Kafka 2.x
 
-                for(ConsumerRecord<String, String> record: records) {
-                    /*logger.info("Key: "+ record.key() + " Value: " + record.value());
-                    logger.info("Partition: " + record.partition() + " Offset: " + record.offset());*/
+                Integer recordCount = records.count();
 
+                logger.info("Received " +  recordCount + " records");
+
+                BulkRequest bulkRequest = new BulkRequest();
+
+                for(ConsumerRecord<String, String> record: records) {
                     // 2 strategies to make the consumer idempotent
                     // String id = record.topic() + "_" + record.partition() + "_" + record.offset();
 
                     // Twitter feed specific id
-                    String id = extractIdFromTweet(record.value());
-                    logger.info("Tweet id to be inserted at ElasticSearch: "+id);
+                    try {
+                        String id = extractIdFromTweet(record.value());
+                        // where we insert data into Elasticsearch
+                        String jsonString = record.value();
+                        indexRequest.id(id); // to make the consumer idempotent
+                        indexRequest.source(jsonString, XContentType.JSON);
+                        bulkRequest.add(indexRequest); // we add to our bulk request
 
-                    // where we insert data into Elasticsearch
-                    String jsonString = record.value();
-                    indexRequest.id(id); // to make the consumer idempotent
-                    indexRequest.source(jsonString, XContentType.JSON);
-                    IndexResponse indexResponse = client.index(indexRequest, RequestOptions.DEFAULT);
-                    String responseId = indexResponse.getId();
-                    logger.info("Index response id: "+responseId);
+                    } catch (NullPointerException e) {
+                        logger.error("Error while processing tweet", record.value());
+                        logger.error("NullPointerException", e);
+                        recordCount--;
+                    }
+
+                }
+
+                if(recordCount > 0) {
+                    BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                    logger.info("Committing offsets...");
+                    consumer.commitSync();
+                    logger.info("Offset have been commited");
                     Thread.sleep(1000);
                 }
             }
@@ -125,6 +141,9 @@ public class ElasticSearchConsumer {
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); // disable auto commit of offsets
+        // if we are saving in bulk to ElasticSearch it's possible
+        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "100"); // we should only received 10 records at time
 
         // create consumer
         KafkaConsumer<String,String> consumer = new KafkaConsumer<String, String>(properties);
