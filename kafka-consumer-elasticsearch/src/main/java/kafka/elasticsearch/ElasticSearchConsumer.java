@@ -95,11 +95,17 @@ public class ElasticSearchConsumer {
 
     }
 
+    public class User {
+        public String name = null;
+        public int followers_count = 0;
+    }
+
     public class Tweet {
         public String created_at = null;
         public String id_str = null;
         public transient int    id = 0; // exclude from serialization and deserialization
         public String text = null;
+        User user;
     }
 
     private static Gson gson = new Gson();
@@ -107,6 +113,7 @@ public class ElasticSearchConsumer {
     public static String extractIdFromTweet(String tweetJson) {
         // gson parse
         Tweet tweet = gson.fromJson(tweetJson, Tweet.class);
+        // logger.info("Followers count: "+ Integer.toString(tweet.user.followers_count));
         return tweet.id_str;
     }
 
