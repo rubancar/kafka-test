@@ -1,0 +1,9 @@
+<component name="ProjectDictionaryState">
+  <dictionary name="badwolf">
+    <words>
+      <w>cleanup.policy</w>
+      <w>min.cleanable.dirty.ratio</w>
+      <w>segment.ms</w>
+    </words>
+  </dictionary>
+</component>
